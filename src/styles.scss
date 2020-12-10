@@ -1,0 +1,87 @@
+
+
+.dark-mode {
+    color: #cccccc;
+
+    .text-area {
+        color: #d4d4d4;
+        background-color: #1e1e1e;
+    }
+
+    .background {
+        background-color: #252526;
+    }
+
+    .palette {
+        background-color: rgb(51, 51, 51);
+    }
+
+    .palette .item {
+        color: rgba(255, 255, 255, 0.4);
+        &:hover {
+            color: rgb(255, 255, 255);
+        }
+        &.selected {
+            color: rgb(255, 255, 255);
+            border-left: 1px solid rgb(255, 255, 255);
+        }
+    }
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.toggle {
+	cursor: pointer;
+    display: inline-block;
+    
+    .toggle-switch {
+        display: inline-block;
+        background: #ccc;
+        border-radius: 16px;
+        width: 58px;
+        height: 32px;
+        position: relative;
+        vertical-align: middle;
+        transition: background 0.25s;
+        &:before,
+        &:after {
+            content: "";
+        }
+        &:before {
+            display: block;
+            background: linear-gradient(to bottom, #fff 0%,#eee 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.25);
+            width: 24px;
+            height: 24px;
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            transition: left 0.25s;
+        }
+        .toggle:hover &:before {
+            background: linear-gradient(to bottom, #fff 0%,#fff 100%);
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
+        }
+        .toggle-checkbox:checked + & {
+            background: #56c080;
+            &:before {
+                left: 30px;
+            }
+        }
+    }
+    .toggle-checkbox {
+        position: absolute;
+        visibility: hidden;
+    }
+    .toggle-label {
+        margin-left: 5px;
+        position: relative;
+        top: 2px;
+    }
+}
