@@ -5,6 +5,9 @@
           <p v-for="(text, index) in texts" :key="index">{{ text }}</p>
           <p v-if="intermediateText">{{ intermediateText }}</p>
         </template>
+        <template v-else-if="textsLoading">
+          <span class="hint">Loading...</span>
+        </template>
         <template v-else>
           <span class="hint">Upload audio through the microphone or from file. Transcription will apear here</span>
         </template>
@@ -42,6 +45,8 @@ import io from 'socket.io-client';
 
 import { baseUrl } from '../util/request';
 
+import { makeRequest } from '../util/request';
+
 export default defineComponent({
   name: 'WorkspaceMainPanel',
   props: {
@@ -64,7 +69,8 @@ export default defineComponent({
       mediaStreamSource,
       socket,
       localModel,
-      intermediateText: ''
+      intermediateText: '',
+      textsLoading: false
     }
   },
   computed: {
@@ -77,6 +83,11 @@ export default defineComponent({
       texts = texts.concat(this.localModel.texts);
 
       return texts;
+    }
+  },
+  watch: {
+    session() {
+      this.handleSessionChanged();
     }
   },
   mounted() {
@@ -106,8 +117,28 @@ export default defineComponent({
         }
       }
     });
-  },
+
+    this.handleSessionChanged();
+  },    
   methods: {
+   async handleSessionChanged() {
+      if (!this.session) {
+        this.textsLoading = false;
+        this.localModel.texts = [];
+        return;
+      }
+      this.textsLoading = true;
+      const result = await makeRequest('GET', `/sessions/${this.session}`);
+      const model = JSON.parse(result);
+      this.localModel.texts = [];
+      model.forEach((m: any) => {
+        if (m.recognitions) {
+          const currentText = m.recognitions.map((c: any) => c.text).join(' ');
+          this.localModel.texts.push(currentText);
+        }
+      });
+      this.textsLoading = false;
+    },
     toggleMic() {
       if (this.recording) {
         this.stopMic();

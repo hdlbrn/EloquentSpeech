@@ -227,7 +227,7 @@ async function getFilesContentOrderedByDate(files, currentFolder) {
   .sort((a, b) => a.time - b.time)
   .map(fc => {
     return {
-      content: fc.content ? JSON.parse(fc.content) : '',
+      recognitions: fc.content ? JSON.parse(fc.content) : null,
       audio: fc.name.replace('.json', '.wav'),
       fullPath: currentFolder.replace(BASE_SESSIONS_FOLDER, '') + '/'
     }

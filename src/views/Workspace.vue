@@ -11,9 +11,6 @@ import { defineComponent } from 'vue';
 export default defineComponent({
   name: 'Workspace',
   components: { WorkspaceSidePanel, WorkspaceMainPanel },
-  props: {
-    model: Object
-  },
   data() {
     return {
       session: ''
@@ -43,6 +40,9 @@ export default defineComponent({
   width: 300px;
   top: 0;
   bottom: 0;
+  padding: 10px;
+  overflow: auto;
+  box-sizing: border-box;
 }
 
 .main-panel {

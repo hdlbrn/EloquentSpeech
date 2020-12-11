@@ -28,14 +28,14 @@ export default defineComponent({
   },
   watch: {
     session() {
-      this.expandSessionPaths();
+      this.handleSessionChanged();
     }
   },
   mounted() {
-    this.expandSessionPaths();
+    this.handleSessionChanged();
   },
   methods: {
-    expandSessionPaths() {
+    handleSessionChanged() {
       if (!this.session) {
         return;
       }
@@ -101,7 +101,6 @@ ul {
 }
 li {
   display: inline-block;
-  margin: 0 10px;
 }
 a {
   color: #42b983;
