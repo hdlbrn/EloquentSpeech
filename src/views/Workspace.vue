@@ -4,13 +4,13 @@
 </template>
 
 <script lang="ts">
-import SidePanel from '@/components/SidePanel.vue';
-import MainPanel from '@/components/MainPanel.vue';
+import WorkspaceSidePanel from '@/components/WorkspaceSidePanel.vue';
+import WorkspaceMainPanel from '@/components/WorkspaceMainPanel.vue';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'Workspace',
-  components: { SidePanel, MainPanel },
+  components: { WorkspaceSidePanel, WorkspaceMainPanel },
   props: {
     model: Object
   },
