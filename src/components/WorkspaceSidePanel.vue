@@ -57,7 +57,19 @@ export default defineComponent({
         node.isLoading = true;
         node.isOpen = true;
         const result = await makeRequest('GET', `/sessions/${path}`);
-        node.children = JSON.parse(result).children;
+
+        let children = JSON.parse(result).children;
+        if (node.children) {
+          const exisingChildrenPerName: any = {};
+          node.children.forEach((c: any) => {
+            exisingChildrenPerName[c.name] = c;
+          });
+          children = children.map((child: any) => {
+            const existingChild = exisingChildrenPerName[child.name] || {};
+            return Object.assign({}, existingChild, child);
+          })
+        }
+        node.children = children;
         node.isLoading = false;
       }
     },
