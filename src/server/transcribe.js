@@ -1,4 +1,5 @@
 const fs = require('fs').promises;
+const pathJoin = require('path').join;
 const DeepSpeech = require('deepspeech');
 const VAD = require('node-vad');
 const { v4: uuidv4 } = require('uuid');
@@ -35,6 +36,7 @@ let writeStream = undefined;
 let currentStreamingSession = undefined;
 let writeStreamPromise = undefined;
 let intermediateResults = undefined;
+let supportLiveResults = true;
 
 let SILENCE_THRESHOLD = 200;
 
@@ -89,13 +91,17 @@ async function initStreamingSession(session) {
   const day = date.substring(8, 10); // 17
   const time = isoStringToFs(date.substring(11));
 
-  session = session || `${yearAndMonth}/${day}/${time}`;
+  if (session) {
+    session = encodeLastLeafFolderIfNeeded(session).path;
+  } else {
+    session = `${yearAndMonth}/${day}/${time}`;
+  }
 
-  currentStreamingSession = `${session}/${uuidv4()}`;
+  currentStreamingSession = pathJoin(session, uuidv4());
 
-  await fs.mkdir(`${BASE_SESSIONS_FOLDER}/${session}`, { recursive: true });
+  await fs.mkdir(pathJoin(BASE_SESSIONS_FOLDER, session), { recursive: true });
 
-  writeStream = new WavFileWriter(`${BASE_SESSIONS_FOLDER}/${currentStreamingSession}.wav`, {
+  writeStream = new WavFileWriter(pathJoin(BASE_SESSIONS_FOLDER, `${currentStreamingSession}.wav`), {
     sampleRate: 16000,
     bitDepth: 16,
     channels: 1
@@ -107,7 +113,7 @@ async function initStreamingSession(session) {
   intermediateResults = [];
 }
 
-async function processAudioStream(data, liveResults) {
+async function processAudioStream(data) {
   if (!writeStream) {
     await queue.enqueue(() => initStreamingSession());
   }
@@ -122,7 +128,7 @@ async function processAudioStream(data, liveResults) {
     resetAudioStream();
   }, 5000);
 
-  if (liveResults) {
+  if (supportLiveResults) {
     return await queue.enqueue(() => maybeHandleLiveResults(data));
   }
 }
@@ -136,21 +142,33 @@ async function resetAudioStream() {
 }
 
 function decodeStream(intermediate) {
-  let result;
   const start = new Date();
 	const text = modelStream.finishStream();
-  if (text) {
-    const recogTime = new Date().getTime() - start.getTime();
-    result = {
-      text,
-      recogTime,
-      audioLength: Math.round(recordedAudioLength),
-      intermediate: !!intermediate
-    };
-  }
+  const recogTime = new Date().getTime() - start.getTime();
+  const result = {
+    text,
+    recogTime,
+    audioLength: Math.round(recordedAudioLength),
+    intermediate: !!intermediate
+  };
   if (intermediate) {
     modelStream = englishModel.createStream();
   }
+
+  console.log('recognized: ', result);
+	return result;
+}
+
+function decodeBuffer(buffer) {
+  const start = new Date();
+	const text = englishModel.stt(buffer);
+  const recogTime = new Date().getTime() - start.getTime();
+  const result = {
+    text,
+    recogTime
+  };
+
+  console.log('recognized: ', result);
 	return result;
 }
 
@@ -183,6 +201,18 @@ async function finishStreamSession() {
   writeStreamPromise = null;
   intermediateResults = null;
 
+  return result;
+}
+
+async function transcribeFile(file) {
+  console.log('Transcribing ' + file);
+  const buffer = await fs.readFile(file);
+  
+  const result = decodeBuffer(buffer);
+
+  let allResults = [result];
+  
+  fs.writeFile(`${file.replace('.wav', '.json')}`, JSON.stringify(allResults));
   return result;
 }
 
@@ -221,7 +251,6 @@ async function getFilesContentOrderedByDate(files, currentFolder) {
   if (filesWithContentPromises.length > 0) {
     filesWithContent = await Promise.all(filesWithContentPromises);
   }
-  console.log('filesWithContent ', filesWithContent);
 
   return filesWithContent
   .sort((a, b) => a.time - b.time)
@@ -234,7 +263,7 @@ async function getFilesContentOrderedByDate(files, currentFolder) {
   });
 }
 
-async function getSessionsInternal(path) {
+function encodeLastLeafFolderIfNeeded(path) {
   const paths = path.split('/').filter(p => !!p);
   let currentPath = paths.pop();
   const isLeafFolderValue = isLeafFolderIso(currentPath);
@@ -242,12 +271,19 @@ async function getSessionsInternal(path) {
     currentPath = isoStringToFs(currentPath);
   }
   paths.push(currentPath);
-  path = paths.join('/');
+
+  return {
+    path: paths.join('/'),
+    isLeafFolderValue
+  }
+}
+
+async function getSessionsInternal(path) {
+  let encoded = encodeLastLeafFolderIfNeeded(path);
   
-  const files = await fs.readdir(path);
-  if (isLeafFolderValue) {
-    console.log('is leaf folder');
-    return getFilesContentOrderedByDate(files, path);
+  const files = await fs.readdir(encoded.path);
+  if (encoded.isLeafFolderValue) {
+    return getFilesContentOrderedByDate(files, encoded.path);
   } else {
     return {
       children: files.map(f => {
@@ -258,17 +294,19 @@ async function getSessionsInternal(path) {
           isFolder: !isLeafFolderValue
         }
       }),
-      fullPath: path.replace(BASE_SESSIONS_FOLDER, '') + '/'
+      fullPath: encoded.path.replace(BASE_SESSIONS_FOLDER, '') + '/'
     };
   }
 }
 
 async function getSessions(path) {
-  return getSessionsInternal(BASE_SESSIONS_FOLDER + '/' + path);
+  return getSessionsInternal(pathJoin(BASE_SESSIONS_FOLDER, path));
 }
 
 module.exports = {
+  initStreamingSession,
   processAudioStream,
   resetAudioStream,
-  getSessions
+  getSessions,
+  transcribeFile
 }

@@ -148,6 +148,13 @@ export default defineComponent({
     },
     startMic() {
       this.recording = true;
+
+      const config = {
+        session: this.session
+      };
+
+      this.socket.emit('stream-init', config);
+
       WebVoiceProcessor.start((data: any) => {
         if (this.socket.connected) {
           this.socket.emit('stream-data', data.buffer);

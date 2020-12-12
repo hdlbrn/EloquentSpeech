@@ -44,11 +44,12 @@ io.on('connection', function (socket) {
   });
 
   socket.on('stream-init', function (config) {
-    transcribe.setConfig(config);
+    config = config || {};
+    transcribe.initStreamingSession(config.session);
   });
 
   socket.on('stream-data', function (data) {
-    transcribe.processAudioStream(data, true).then(result => {
+    transcribe.processAudioStream(data).then(result => {
       socket.emit('recognize', result);
     });
   });
