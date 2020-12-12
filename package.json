@@ -1,7 +1,7 @@
 {
   "name": "eloquentspeech",
+  "description": "Web and Electron App for managing DeepSpeech, Mozilla’s Speech-to-Text Engine",
   "version": "0.1.0",
-  "private": true,
   "scripts": {
     "serve": "vue-cli-service serve --mode web-development",
     "build": "vue-cli-service build",
