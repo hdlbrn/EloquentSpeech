@@ -7,6 +7,10 @@ import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
 global.APP_PATH = app.getAppPath();
+if (process.env.WEBPACK_DEV_SERVER_URL) {
+  global.APP_PATH = require('path').join(global.APP_PATH, '..');
+}
+
 let server: any;
 try {
   server = require('./server/server');

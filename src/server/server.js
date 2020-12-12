@@ -1,3 +1,6 @@
+console.log('Node version: ', process.version);
+
+
 global.APP_PATH = global.APP_PATH || '.';
 
 console.log('global.APP_PATH ' + global.APP_PATH);

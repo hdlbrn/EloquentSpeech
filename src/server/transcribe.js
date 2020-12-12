@@ -264,6 +264,8 @@ async function getFilesContentOrderedByDate(files, currentFolder) {
 }
 
 function encodeLastLeafFolderIfNeeded(path) {
+  const startsWithSlash = path.startsWith('/');
+
   const paths = path.split('/').filter(p => !!p);
   let currentPath = paths.pop();
   const isLeafFolderValue = isLeafFolderIso(currentPath);
@@ -272,13 +274,20 @@ function encodeLastLeafFolderIfNeeded(path) {
   }
   paths.push(currentPath);
 
+  path = '';
+  if (startsWithSlash) {
+    path += '/';
+  }
+  path += paths.join('/');
+
   return {
-    path: paths.join('/'),
+    path,
     isLeafFolderValue
   }
 }
 
 async function getSessionsInternal(path) {
+  console.log('getSessionsInternal ' + path);
   let encoded = encodeLastLeafFolderIfNeeded(path);
   
   const files = await fs.readdir(encoded.path);
