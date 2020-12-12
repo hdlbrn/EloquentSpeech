@@ -9,7 +9,7 @@
           <span class="hint">Loading...</span>
         </template>
         <template v-else>
-          <span class="hint">Upload audio through the microphone or from file. Transcription will apear here</span>
+          <span class="hint">Record audio with the microphone or select existing file. Transcription will apear here</span>
         </template>
       </div>
       
@@ -39,6 +39,7 @@ import io from 'socket.io-client';
 import { baseUrl } from '../util/request';
 
 import { makeRequest } from '../util/request';
+import constants from '../util/constants';
 
 export default defineComponent({
   name: 'WorkspaceMainPanel',
@@ -115,7 +116,7 @@ export default defineComponent({
   },    
   methods: {
    async handleSessionChanged() {
-      if (!this.session) {
+      if (!this.session || this.session === constants.NEW_SESSION_ID) {
         this.textsLoading = false;
         this.localModel.texts = [];
         return;
