@@ -62,6 +62,8 @@ async function maybeHandleLiveResults(data) {
         silenceStart = null;
         const result = decodeStream(true);
         intermediateResults.push(result);
+        await updateStreamingProgress('IN_PROGRESS');
+
         return result;
       }
       break;
@@ -86,14 +88,13 @@ async function initStreamingSession(session) {
     return;
   }
 
-  const date = new Date().toISOString(); // 2020-11-17T19:08:15.511Z
-  const yearAndMonth = date.substring(0, 7); // 2010-11
-  const day = date.substring(8, 10); // 17
-  const time = isoStringToFs(date.substring(11));
-
   if (session) {
     session = encodeLastLeafFolderIfNeeded(session).path;
   } else {
+    const date = new Date().toISOString(); // 2020-11-17T19:08:15.511Z
+    const yearAndMonth = date.substring(0, 7); // 2010-11
+    const day = date.substring(8, 10); // 17
+    const time = isoStringToFs(date.substring(11));
     session = `${yearAndMonth}/${day}/${time}`;
   }
 
@@ -111,6 +112,15 @@ async function initStreamingSession(session) {
   recordedChunks = 0;
   recordedAudioLength = 0;
   intermediateResults = [];
+
+  await updateStreamingProgress('INITIALIZING');
+
+  const sessionId = session.split('/').map(f => {
+    const isLeafFolderValue = isLeafFolder(f);
+    return isLeafFolderValue ? fsToISOString(f) : f
+  }).join('/') + '/';
+
+  return sessionId;
 }
 
 async function processAudioStream(data) {
@@ -172,19 +182,24 @@ function decodeBuffer(buffer) {
 	return result;
 }
 
+async function updateStreamingProgress(status) {
+  if (currentStreamingSession) {
+    let sessionObject = {
+      recognitions: intermediateResults.filter(r => !!r),
+      status: status
+    };
+    return await fs.writeFile(`${BASE_SESSIONS_FOLDER}/${currentStreamingSession}.json`, JSON.stringify(sessionObject));
+  }
+}
+
 async function finishStreamSession() {
   let result;
   if (modelStream) {
     result = decodeStream(false);
+    intermediateResults.push(result);
   }
 
-  let allResults = [].concat(intermediateResults);
-  allResults.push(result);
-  allResults = allResults.filter(r => !!r);
-
-  if (currentStreamingSession) {
-    fs.writeFile(`${BASE_SESSIONS_FOLDER}/${currentStreamingSession}.json`, JSON.stringify(allResults));
-  }
+  await updateStreamingProgress('COMPLETED');
 
   silenceBuffers = [];
   modelStream = null;
@@ -255,8 +270,10 @@ async function getFilesContentOrderedByDate(files, currentFolder) {
   return filesWithContent
   .sort((a, b) => a.time - b.time)
   .map(fc => {
+    const content = fc.content ? JSON.parse(fc.content) : {}
     return {
-      recognitions: fc.content ? JSON.parse(fc.content) : null,
+      status: content.status,
+      recognitions: content.recognitions,
       audio: fc.name.replace('.json', '.wav'),
       fullPath: currentFolder.replace(BASE_SESSIONS_FOLDER, '') + '/'
     }

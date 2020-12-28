@@ -6,11 +6,14 @@ global.APP_PATH = global.APP_PATH || '.';
 console.log('global.APP_PATH ' + global.APP_PATH);
 
 const express = require('express');
-const os = require('os');
+const multer = require('multer')
 const http = require('http');
 const app = express();
 const socketIO = require('socket.io');
 const transcribe = require('./transcribe');
+const TranscribeAudioJob = require('./transcribe-audio-job');
+
+const { v4: uuidv4 } = require('uuid');
 
 app.use(function (req, res, next) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,11 +28,48 @@ app.get('/sessions/*', function (req, res) {
   })
 });
 
-app.get('/audios/:path', function(req, res) {
+app.get('/audios/:path', function (req, res) {
   if (!req.params.path || !req.params.path.endsWith('.wav')) {
     return res.sendStatus(httpResponseCodes.INTERNAL_SERVER_ERROR);
   }
-  res.sendFile(path, {root: `${global.APP_PATH}/storedaudios/${eq.params.path}`});
+  res.sendFile(path, { root: `${global.APP_PATH}/storedaudios/${eq.params.path}` });
+});
+
+
+const multerStorage = multer.diskStorage({
+  destination: function(req, file, cb) {
+      cb(null, `${global.APP_PATH}/uploadedaudios/`);
+  },
+
+  filename: function(req, file, cb) {
+      cb(null, uuidv4() + '-' + file.originalname);
+  }
+});
+
+app.post('/transcribe-job', (req, res) => {
+
+  let upload = multer({ storage: multerStorage }).single('media_file');
+
+  upload(req, res, function (err) {
+    if (req.fileValidationError) {
+      return res.send(req.fileValidationError);
+    }
+    else if (!req.file) {
+      return res.send('Please select an image to upload');
+    }
+    else if (err instanceof multer.MulterError) {
+      return res.send(err);
+    }
+    else if (err) {
+      return res.send(err);
+    }
+
+    new TranscribeAudioJob(req.file.path).start().then(sessionId => {
+      res.json({
+        sessionId
+      });
+    });
+  });
 });
 
 const server = http.createServer(app);

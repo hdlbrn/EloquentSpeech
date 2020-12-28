@@ -1,6 +1,6 @@
 <template>
   <workspace-side-panel :session="session" @openSession="openSession" class="side-panel"></workspace-side-panel>
-  <workspace-main-panel :session="session" class="main-panel"></workspace-main-panel>
+  <workspace-main-panel :session="session" @openSession="openSession" class="main-panel"></workspace-main-panel>
 </template>
 
 <script lang="ts">
